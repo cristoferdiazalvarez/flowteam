@@ -24,7 +24,7 @@ FlowTeam brings the overview, board, task conversation and team settings into a 
 
 **Concurrent edits should be visible.** A task's conditional version update makes one of two conflicting edits fail with 409 instead of losing a teammate's work silently. Project row locks serialize board ordering, and the client rolls optimistic changes back if a write fails. Comments carry request keys so a completed request can be retried safely.
 
-**Storage is part of security.** Attachments stay outside public assets. Both uploads and downloads check membership, file sizes and allowed content types. The cloud adapter is an explicit unfinished deployment prerequisite; ephemeral function disk is never presented as durable storage.
+**Storage is part of security.** Attachments stay outside public assets. Both uploads and downloads check membership, file sizes and allowed content types. The hosted adapter stores small private files in PostgreSQL under atomic quotas; this avoids a separate storage provider for a zero-budget demo. The explicit tradeoff is consuming database space/transfer, so large files are excluded. Ephemeral function disk is never presented as durable storage.
 
 ## Challenges found through execution
 
@@ -45,4 +45,4 @@ The pointer test is intended to exercise actual dnd-kit sensor movement and veri
 
 ## Honest scope
 
-Implemented scope is documented in README and the API contract. Email verification/recovery, presence, true nested subtasks, pagination and a durable cloud storage adapter remain future work. No live deployment or remote CI execution is claimed. This project demonstrates a coherent application and the ability to identify its operating boundaries.
+Implemented scope is documented in README and the API contract. Email verification/recovery, presence, true nested subtasks, pagination and larger object storage remain future work. No live deployment or remote CI execution is claimed. This project demonstrates a coherent application and the ability to identify its operating boundaries.

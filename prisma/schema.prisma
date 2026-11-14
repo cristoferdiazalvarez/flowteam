@@ -85,6 +85,7 @@ model Workspace {
   activities    Activity[]
   notifications Notification[]
   teams         Team[]
+  storageBlobs  StorageBlob[]
 }
 
 model Team {
@@ -300,4 +301,16 @@ model AuthRateLimit {
   key         String @unique
   count       Int
   lastRequest BigInt
+}
+
+// Bounded private attachments for serverless demos; never included in snapshots.
+model StorageBlob {
+  key         String    @id @default(uuid())
+  workspaceId String
+  content     Bytes
+  size        Int
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }

@@ -16,7 +16,7 @@
 
 This is a working portfolio application, not a claim of independent security certification. Email verification/recovery, MFA, granular private projects, malware scanning, audit-log immutability, account deletion and enterprise compliance workflows are not implemented. Demo users have private workspaces and generated credentials; their sessions expire after 7 days. Clear cookies to start a fresh demo. Demo workspace creation is not the same as a globally shared demo database.
 
-The local storage quota check is not a strict cross-request storage reservation; simultaneous uploads can overshoot the aggregate 50 MB cap. File data is read into memory after size checks; a hosting proxy must cap incoming requests. No public upload URLs or inline HTML/SVG serving are provided. Removing a task/project deletes attachment metadata; use dry-run maintenance and explicit apply to reclaim orphaned disk files. Durable file storage is pending for Vercel.
+The local filesystem adapter’s metadata quota check is not a strict cross-request storage reservation; the hosted database adapter serializes quota reservations with a PostgreSQL advisory transaction lock; simultaneous uploads can overshoot the aggregate 50 MB cap. File data is read into memory after size checks; a hosting proxy must cap incoming requests. No public upload URLs or inline HTML/SVG serving are provided. Removing a task/project deletes attachment metadata; use dry-run maintenance and explicit apply to reclaim orphaned disk files. Vercel uses a private PostgreSQL blob adapter with atomic reservations and 1 MiB/file, 5 MiB/workspace and 100 MiB global binary-data limits. No separate storage service or billing resource is required.
 
 Read snapshots are currently unpaginated and not independently rate limited, so public launch needs hosting-level abuse protection and request budgets. Authentication throttling uses the framework's request context and deployment proxy configuration should be reviewed. This is not a promise of unlimited free public traffic. The free demo action creates a persisted guest account internally without asking visitors to register.
 
@@ -24,7 +24,7 @@ Non-task administrative edits use last-write-wins. Membership authorization is c
 
 ## Retention
 
-`npm run maintenance` reports eligible data only. `npm run maintenance -- --apply` removes demo workspaces older than 14 days **only if every member is a demo.invalid account with no live session**, then unreferenced guest users, old counters, old expired sessions/verifications and orphan UUID files. Real workspaces and demo spaces joined by real accounts are excluded. Review output before apply; schedule only after publication approval. Orphans created by that same run are collected on the next run. Existing auth rate-limit counters still require a future bounded retention rule.
+`npm run maintenance` reports eligible data only. `npm run maintenance -- --apply` removes demo workspaces older than 14 days **only if every member is a demo.invalid account with no live session**, then unreferenced guest users, old counters, old expired sessions/verifications and orphan UUID files. Real workspaces and demo spaces joined by real accounts are excluded. Review output before apply; schedule only after publication approval. Orphans created by that same run are collected on the next run. Database blobs cascade with a workspace; unreferenced database blobs older than 14 days are also eligible for cleanup. Existing auth rate-limit counters still require a future bounded retention rule.
 
 ## Dependency policy
 

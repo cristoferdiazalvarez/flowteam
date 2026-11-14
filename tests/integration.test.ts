@@ -1,7 +1,9 @@
+import 'dotenv/config';
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { randomUUID } from 'node:crypto';
+import { databaseStorageAdapter, MAX_FILE_BYTES, WORKSPACE_FILE_BYTES } from '../lib/storage';
 process.loadEnvFile('.env');
 const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -315,5 +317,68 @@ describe.sequential('PostgreSQL API boundaries and consistency', () => {
       ).status,
     ).toBe(200);
     expect((await db.project.findUniqueOrThrow({ where: { id: projectId } })).archived).toBe(true);
+  });
+  it('protects actual file bytes and rejects invalid, oversized and cross-workspace uploads', async () => {
+    const upload = async (cookie: string, file: File, workspaceId = wa) => {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('workspaceId', workspaceId);
+      form.append('taskId', taskId);
+      const r = await fetch(base + '/api/files/upload', {
+        method: 'POST',
+        headers: { Origin: base, Cookie: cookie },
+        body: form,
+      });
+      return { status: r.status, data: await r.json() };
+    };
+    const good = await upload(
+      a.cookie,
+      new File(['Private persisted integration notes'], 'private-notes.txt', {
+        type: 'text/plain',
+      }),
+    );
+    expect(good.status, JSON.stringify(good.data)).toBe(200);
+    const url = base + '/api/files/' + good.data.id;
+    expect((await fetch(url)).status).toBe(401);
+    const owner = await fetch(url, { headers: { Cookie: a.cookie } });
+    expect(owner.status).toBe(200);
+    expect(await owner.text()).toBe('Private persisted integration notes');
+    expect(owner.headers.get('content-disposition')).toContain('attachment;');
+    const outsider = await account();
+    expect((await fetch(url, { headers: { Cookie: outsider.cookie } })).status).toBe(404);
+    expect((await upload(outsider.cookie, new File(['x'], 'outside.txt'), wb)).status).toBe(404);
+    expect(
+      (await upload(a.cookie, new File(['<script>alert(1)</script>'], 'fake.png'))).status,
+    ).toBe(400);
+    expect(
+      (await upload(a.cookie, new File([new Uint8Array(MAX_FILE_BYTES + 1)], 'large.txt'))).status,
+    ).toBe(400);
+    const snapshot = await state(a.cookie, wa);
+    const attachments = snapshot.data.workspace.projects.flatMap(
+      (p: { tasks: { attachments: unknown[] }[] }) => p.tasks.flatMap((t) => t.attachments),
+    );
+    expect(attachments).toContainEqual({
+      id: good.data.id,
+      name: 'private-notes.txt',
+      size: Buffer.byteLength('Private persisted integration notes'),
+    });
+    expect(JSON.stringify(snapshot.data)).not.toContain('Private persisted integration notes');
+  });
+  it('serializes concurrent database storage reservations at the workspace quota', async () => {
+    const w = await db.workspace.create({ data: { name: 'Storage quota fixture' } });
+    workspaces.push(w.id);
+    const content = Buffer.alloc(MAX_FILE_BYTES, 97);
+    for (let i = 0; i < WORKSPACE_FILE_BYTES / MAX_FILE_BYTES - 1; i++)
+      await databaseStorageAdapter.put(content, w.id);
+    const results = await Promise.allSettled([
+      databaseStorageAdapter.put(content, w.id),
+      databaseStorageAdapter.put(content, w.id),
+    ]);
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((r) => r.status === 'rejected')).toHaveLength(1);
+    expect(
+      (await db.storageBlob.aggregate({ where: { workspaceId: w.id }, _sum: { size: true } }))._sum
+        .size,
+    ).toBe(WORKSPACE_FILE_BYTES);
   });
 });

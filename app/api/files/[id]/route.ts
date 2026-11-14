@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { localStorageAdapter as storage } from '@/lib/storage';
+import { storageAdapter } from '@/lib/storage';
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session) return new NextResponse('Unauthorized', { status: 401 });
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   });
   if (!attachment) return new NextResponse('Not found', { status: 404 });
   try {
-    const file = await storage.get(attachment.key);
+    const file = await storageAdapter().get(attachment.key);
     return new NextResponse(new Uint8Array(file), {
       headers: {
         'Content-Type': 'application/octet-stream',

@@ -20,7 +20,7 @@ Next.js · React · TypeScript · PostgreSQL · Prisma · Better Auth
 
 Project management is more than moving cards. FlowTeam connects a focused overview, real project progress, task context and team permissions. Its demo is a real workspace created for each visitor: make changes, add comments and explore without affecting somebody else's data.
 
-**Resumen en español:** plataforma colaborativa funcional, desarrollada y probada en local, con autenticación, workspaces aislados, roles, proyectos, Kanban persistente, comentarios, adjuntos privados y métricas calculadas desde PostgreSQL. No se ha publicado ni creado infraestructura externa. La demo contiene datos ficticios claramente identificados.
+**Resumen en español:** plataforma colaborativa funcional, desarrollada y probada en local, con autenticación, workspaces aislados, roles, proyectos, Kanban persistente, comentarios, adjuntos privados y métricas calculadas desde PostgreSQL. Publicación autorizada en GitHub y preparación de demo HTTPS gratuita; consulta el estado verificable en docs/DEPLOYMENT.md. La demo contiene datos ficticios claramente identificados.
 
 ## What works
 
@@ -31,7 +31,7 @@ Project management is more than moving cards. FlowTeam connects a focused overvi
 - Custom workflow columns, including configurable completion stages; task creation/editing/deletion, persistent ordering and dnd-kit pointer/keyboard movement.
 - Board, list and month calendar; search and filters for priority, assignee, status, label and due date.
 - Markdown task descriptions, multiple assignees, labels, checklist subtasks, comments, history and permission-protected shareable links.
-- Private local attachments with authenticated downloads, content/type/size checks and a storage adapter boundary.
+- Private attachments with authenticated downloads and content/type/size checks. Vercel uses bounded PostgreSQL blobs (1 MiB/file, 5 MiB/workspace, 100 MiB total); local filesystem storage remains available.
 - Near-real-time HTTP polling, optimistic board movement with rollback, task version conflicts, and idempotency keys for comment retries.
 - User inbox, real project/task/overdue metrics, assignment workload and recent activity.
 - Private, editable demo per visitor, with fictional teammates/projects/tasks/comments. Demo accounts are internal guest identities; no registration form or card is required.
@@ -83,21 +83,21 @@ For production mode locally, keep the database running and use `npm run build &&
 | `BETTER_AUTH_SECRET` | Random 32+ byte signing secret; local setup generates 40 bytes.                               |
 | `BETTER_AUTH_URL`    | Exact app origin, `http://127.0.0.1:3000` locally; HTTPS origin when publishing.              |
 
-See [.env.example](.env.example). Never commit secrets or reuse local credentials in a hosted environment. No paid service, API key, billing account, mail provider or Stripe integration is needed.
+See [.env.example](.env.example). Never commit secrets or reuse local credentials in a hosted environment. No paid plan, mail provider, separate storage service or Stripe integration is needed. Hosted PostgreSQL and Vercel environment credentials stay outside the repository.
 
 ## Stack and structure
 
-| Layer        | Implementation                                                                                     |
-| ------------ | -------------------------------------------------------------------------------------------------- |
-| App          | Next.js 16 App Router, React 19, strict TypeScript                                                 |
-| Interface    | Tailwind CSS 4 pipeline, original CSS tokens, Lucide icons, accessible reusable components, Sonner |
-| Data         | PostgreSQL 18, Prisma 7.10.1 + PostgreSQL driver adapter, versioned SQL migration and seed         |
-| Identity     | Better Auth, Prisma adapter, database sessions and auth rate limits                                |
-| Validation   | Zod schemas plus tenant/resource checks on the server                                              |
-| Client state | TanStack Query, foreground polling and optimistic cache rollback                                   |
-| Board        | dnd-kit pointer/keyboard sensors and transactionally persisted ordering                            |
-| Verification | Vitest, PostgreSQL/API integration tests, Playwright Chromium desktop/mobile                       |
-| Delivery     | Local Git, lockfile, prepared GitHub Actions workflow; no remote execution claimed                 |
+| Layer        | Implementation                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------------- |
+| App          | Next.js 16 App Router, React 19, strict TypeScript                                                            |
+| Interface    | Tailwind CSS 4 pipeline, original CSS tokens, Lucide icons, accessible reusable components, Sonner            |
+| Data         | PostgreSQL 18, Prisma 7.10.1 + PostgreSQL driver adapter, versioned SQL migration and seed                    |
+| Identity     | Better Auth, Prisma adapter, database sessions and auth rate limits                                           |
+| Validation   | Zod schemas plus tenant/resource checks on the server                                                         |
+| Client state | TanStack Query, foreground polling and optimistic cache rollback                                              |
+| Board        | dnd-kit pointer/keyboard sensors and transactionally persisted ordering                                       |
+| Verification | Vitest, PostgreSQL/API integration tests, Playwright Chromium desktop/mobile                                  |
+| Delivery     | Public GitHub repository, lockfile and GitHub Actions workflow; current execution evidence in docs/TESTING.md |
 
 ```text
 app/                  Next pages, layouts, loading/error states and API routes
@@ -135,7 +135,7 @@ npm audit --audit-level=moderate
 
 See [TESTING.md](docs/TESTING.md) for the executed results and exact coverage. Browser tests intentionally respect Better Auth's per-IP sign-up throttle, so account-heavy cases pause between scenarios. E2E creates isolated fixture workspaces and leaves them available locally for inspection. Integration tests delete only their own fixtures. Browser traces/reports are ignored because they can contain temporary session data.
 
-CI is prepared in [.github/workflows/ci.yml](.github/workflows/ci.yml), with a PostgreSQL 18 service, Node 24, build, audit, integration and browser checks. It has not run on GitHub because no push or remote was authorized.
+CI is prepared in [.github/workflows/ci.yml](.github/workflows/ci.yml), with a PostgreSQL 18 service, Node 24, build, audit, integration and browser checks. GitHub publication is authorized; see the verification record for actual remote CI results.
 
 ## Security and limits
 
@@ -148,9 +148,9 @@ Current limitations:
 - All workspace projects are visible to workspace members; project participation is not an additional privacy boundary.
 - Email verification/password recovery, MFA and actual email invitation delivery are not connected.
 - Snapshots are unpaginated; broad public traffic needs narrower queries, abuse controls, request budgets and retention scheduling.
-- Local attachments work. Vercel uploads are deliberately disabled until a private durable cloud storage adapter is implemented; no ephemeral persistence is promised.
+- Hosted attachments use private PostgreSQL bytea storage with atomic quotas. This is a small-demo design, not an object store for large files; it consumes the same free database storage and transfer limits.
 - Task content/movement/deletion use version checks. Administrative settings and checklist completion use small last-write-wins updates.
-- Cloud deployment, hosted HTTPS/cookies and Linux CI execution remain unverified.
+- Production HTTPS and remote CI are recorded separately from local results in docs/TESTING.md; do not infer a result from prepared configuration.
 
 `npm run maintenance` is dry-run only. Review the [retention rules](docs/SECURITY.md) before explicitly using `npm run maintenance -- --apply`.
 
@@ -172,14 +172,14 @@ Screenshots are actual local browser captures generated by Playwright, with fict
 
 ## Publishing later
 
-[DEPLOYMENT.md](docs/DEPLOYMENT.md) prepares Vercel Hobby + Neon Free without provisioning anything. It records official plan limits checked on 2026-11-14, explains polling consumption and the private-storage prerequisite, and lists the explicit approval needed to create resources or publish. There is no configured Git remote or live URL. Nothing has been posted to LinkedIn.
+[DEPLOYMENT.md](docs/DEPLOYMENT.md) records the authorized Vercel Hobby + independent Neon Free release. It records official plan limits checked on 2026-11-14, explains polling consumption and the private-storage prerequisite, and lists the explicit approval needed to create resources or publish. Repository: https://github.com/cristoferdiazalvarez/flowteam. Nothing has been posted to LinkedIn.
 
 ## Roadmap
 
 1. Paginated snapshots/event cursors, idle backoff and stricter public demo budgets.
-2. Authorized private durable cloud storage and file scanning policy.
+2. File scanning policy and larger object storage only if future requirements justify it.
 3. Email verification, recovery and invitation delivery.
-4. CI execution and HTTPS deployment after explicit approval.
+4. Maintain verified CI and HTTPS release evidence.
 5. Optional presence, richer subtask hierarchy and event-driven collaboration after measuring real usage.
 
 FlowTeam is independent of BusinessOS, Atelier Commerce and Developer Portfolio. Those projects were not modified.

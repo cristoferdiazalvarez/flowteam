@@ -522,7 +522,7 @@ export function TaskModal({
               >
                 <Plus size={14} />
                 {uploading ? 'Uploading…' : 'Attach a file'}
-                <small>Private · PDF, text, images · up to 5 MB</small>
+                <small>Private · PDF, text, images · up to 1 MiB</small>
               </button>
             </section>
             <section className="detail-section">

@@ -11,7 +11,8 @@ flowchart LR
   AU --> P[(PostgreSQL)]
   S --> P
   N --> F[Private StorageAdapter]
-  F --> L[Ignored local .storage directory]
+  F --> L[Local filesystem in development]
+  F --> P
 ```
 
 ## Application boundaries
@@ -49,4 +50,4 @@ Counts are derived from persisted tasks and configured completion columns. “In
 
 Full snapshots favor simplicity over bandwidth and query efficiency. Add event cursors, ETags and pagination before wider public use. Presence, offline changes, rich-text coediting, recurring tasks and email delivery are not implemented. Markdown supplies safe formatted descriptions. Checklist items are the current subtask representation; there is no nested task hierarchy.
 
-Deployment requires private durable file storage or accepting disabled uploads. Add scheduled demo/session/rate-limit retention, monitoring and external abuse protection before broadly advertising an anonymous demo. See [security](SECURITY.md) and [deployment](DEPLOYMENT.md).
+Deployment stores private attachment bytes in PostgreSQL with an advisory lock around quota reservations (1 MiB/file, 5 MiB/workspace, 100 MiB globally). This keeps the demo within a bounded part of the free database storage allowance without another provider; database compute/transfer still apply. Add scheduled demo/session/rate-limit retention, monitoring and external abuse protection before broadly advertising an anonymous demo. See [security](SECURITY.md) and [deployment](DEPLOYMENT.md).

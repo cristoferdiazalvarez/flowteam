@@ -19,7 +19,8 @@
     "local": "node scripts/local.mjs",
     "maintenance": "tsx scripts/maintenance.ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "audit:publication": "node scripts/publication-audit.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

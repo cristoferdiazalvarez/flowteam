@@ -13,3 +13,12 @@
 - Final light-board contrast follow-up: targeted tablet browser check 1/1 passed; 14 authentic PNG screenshots now available. Final optimized build, lint, strict TypeScript and 6 unit tests pass after the visual adjustment.
 - Final full integration run 10/10; final full browser suite 8 passed / 3 intentionally skipped. Audit 0 vulnerabilities. Runtime, .env and traces confirmed ignored by Git. Prior portfolio projects untouched.
 - Launcher teardown verified: HTTP 200, Ctrl+C exits successfully, and both ports 3000/55437 refuse connections afterward. Corrected embedded-postgres's existing-database bootstrap connection leak by explicitly closing a dedicated pg client. Data remains on disk.
+
+## Authorized publication — 2026-11-14
+
+- Owner authorized a public `cristoferdiazalvarez/flowteam` repo and independent Vercel Hobby/Neon Free resources; no paid plans or billing changes permitted.
+- Verified existing provider sessions: Vercel team is Hobby, Neon organization/account Free. Existing BusinessOS/Atelier databases are excluded from all writes.
+- Rechecked lint, TypeScript, build, unit tests and audit (0 vulnerabilities).
+- Implemented bounded private PostgreSQL attachment storage for serverless without an additional provider; applied new local migration. Real integration suite now 12/12 including bytes, tenant access, invalid/oversized files and concurrent quota reservations.
+- Removed all mobile skips. Full browser suite: 11/11 passed, including real touch-event drag, collaboration in independent mobile contexts and member/admin/private-file tests. Completed in 2.7 minutes against production build on isolated port 3001; preserved the user's dev server on 3000.
+- Sanitized the original local Git commit's author/committer email to GitHub noreply before publication.

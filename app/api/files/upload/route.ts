@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { taskAccess, limit } from '@/lib/service';
 import { ApiError } from '@/lib/validation';
-import { localStorageAdapter as storage, safeFile } from '@/lib/storage';
+import { storageAdapter, safeFile, MAX_FILE_BYTES, WORKSPACE_FILE_BYTES } from '@/lib/storage';
 export async function POST(req: NextRequest) {
   try {
     if (req.headers.get('origin') !== new URL(process.env.BETTER_AUTH_URL || req.url).origin)
@@ -11,14 +11,12 @@ export async function POST(req: NextRequest) {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session) throw new ApiError(401, 'Please sign in.');
     await limit(`upload:${session.user.id}`, 20, 3600000);
-    if (process.env.VERCEL)
-      throw new ApiError(503, 'Attachments need a durable private storage adapter on this host.');
-    if (Number(req.headers.get('content-length')) > 6 * 1024 * 1024)
-      throw new ApiError(413, 'Maximum file size is 5 MB.');
+    if (Number(req.headers.get('content-length')) > MAX_FILE_BYTES + 65536)
+      throw new ApiError(413, 'Maximum file size is 1 MiB.');
     const form = await req.formData();
     const file = form.get('file');
-    if (!(file instanceof File) || file.size < 1 || file.size > 5 * 1024 * 1024)
-      throw new ApiError(400, 'Choose a file between 1 byte and 5 MB.');
+    if (!(file instanceof File) || file.size < 1 || file.size > MAX_FILE_BYTES)
+      throw new ApiError(400, 'Choose a file between 1 byte and 1 MiB.');
     const t = await taskAccess(
       session.user.id,
       String(form.get('workspaceId')),
@@ -31,9 +29,10 @@ export async function POST(req: NextRequest) {
       where: { task: { project: { workspaceId: String(form.get('workspaceId')) } } },
       _sum: { size: true },
     });
-    if ((total._sum.size || 0) + data.length > 50 * 1024 * 1024)
-      throw new ApiError(413, 'This workspace has reached its 50 MB local attachment limit.');
-    const key = await storage.put(data);
+    if ((total._sum.size || 0) + data.length > WORKSPACE_FILE_BYTES)
+      throw new ApiError(413, 'This workspace has reached its 5 MiB attachment limit.');
+    const storage = storageAdapter();
+    const key = await storage.put(data, String(form.get('workspaceId')));
     try {
       const attachment = await db.attachment.create({
         data: {

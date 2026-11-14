@@ -1,36 +1,44 @@
-# Publication plan — no deployment performed
+# FlowTeam release
 
-This repository has no configured remote and no cloud resources were created. Publication, account/project creation, push and external resource provisioning require the owner's explicit authorization. Do not add payment details, upgrade plans, enable paid add-ons, or accept an automatic paid trial.
+Publication was explicitly authorized on 2026-11-14 for **cristoferdiazalvarez/flowteam**, Vercel Hobby and a new independent Neon Free database. No paid plan, trial, card, paid build machine or separate storage/realtime service is used.
 
-## Proposed free portfolio setup
+- Repository: https://github.com/cristoferdiazalvarez/flowteam
+- Assigned production origin: https://flowteam-ten.vercel.app (release verification in progress; results are recorded in TESTING.md)
+- Vercel project: `flowteam`, verified Hobby team; Node 26.x, Frankfurt function region.
+- Neon project: `flowteam`, verified Free organization, PostgreSQL 18 in AWS Frankfurt. Separate from `businessos-demo` and `atelier-commerce`; neither was modified.
+- Runtime uses a pooled connection. Checked-in migrations use a direct connection supplied only through a child process environment. Local secrets/database files were not uploaded.
 
-Next.js on Vercel Hobby + PostgreSQL on Neon Free is technically compatible with the current HTTP transport and Prisma's PostgreSQL adapter. It is intended for a small portfolio demo, not an unlimited production service. Neither service is needed to run locally.
+## Free limits checked before provisioning
 
-Official documentation checked on **2026-11-14**:
+Official sources checked on 2026-11-14:
 
-- [Vercel Hobby](https://vercel.com/docs/plans/hobby): published allowances include 1 million function invocations/month, 4 active CPU-hours, 360 GB-hours provisioned memory, 100 GB fast transfer and a 300-second function duration limit. Features generally pause when a free limit is exhausted. Recheck the current account terms and limits before creating anything.
-- [Neon pricing](https://neon.com/pricing): Free currently lists 100 CU-hours/month/project, 1 GB PostgreSQL storage/project and 5 GB network transfer/month; free usage can suspend when limits are reached. No credit card is required. Keep the account on Free. The app does not use Neon's optional managed auth, object storage or AI services.
-- [Vercel WebSockets announcement](https://vercel.com/changelog/websocket-support-is-now-generally-available), dated 2026-10-20, now documents native support. Older “no WebSocket server” guidance is outdated. This implementation still deliberately uses polling: it requires no persistent connection, connection affinity, fan-out service or assumptions about function lifetime. WebSocket compute follows function limits/pricing; availability alone does not provide a shared broadcast bus across instances.
+- [Vercel Hobby](https://vercel.com/docs/plans/hobby): 1 million function invocations/month, 4 active CPU-hours, 360 GB-hours provisioned memory and 100 GB fast transfer. Exceeding free allowances can pause functionality. Project creation does not upgrade the team.
+- [Neon pricing](https://neon.com/pricing): Free lists 100 CU-hours/month/project, 1 GB PostgreSQL storage/project and 5 GB network transfer/month. It suspends compute or disallows growth when limits are reached; no card is required. The provider enforces the Free suspension interval, which was left unchanged. Compute is bounded at 0.25 CU for this demo.
+- [Vercel request limits](https://vercel.com/docs/functions/limitations): binary uploads are capped by this app at 1 MiB, comfortably below function body limits.
 
-At a 3-second interval, one foreground tab produces about **1,200 snapshot requests/hour**, plus authentication traffic and user actions. Continuous polling can keep a free database awake, consuming compute; many visitors can exhaust transfer and function allowances. Full snapshots grow with workspace size. Before public promotion, add pagination/event cursors, backoff while idle, hosting abuse controls and a retention schedule. A free alternative needing no service account is the local setup already supplied. A self-hosted always-on server could add PostgreSQL LISTEN/NOTIFY and SSE later, but that is a different hosting model and has not been implemented or tested here.
+The account/organization plans were verified through authenticated provider APIs immediately before creating resources. No billing APIs, payment-card actions, upgrades, add-ons, paid build options or plan changes were invoked. Free quotas are finite: temporary unavailability on exhaustion is acceptable; automatic paid upgrading is not.
 
-## Approval-ready steps
+## Polling and storage budget
 
-After explicit publication authorization:
+One foreground tab polling every 3 seconds sends approximately **1,200 workspace snapshot requests/hour**, plus authentication and user actions. Two continuously active tabs approximately double that. Actual cadence also includes request latency. Polling pauses in hidden tabs; it can keep Neon compute awake and consume transfer even when no task changes. At 0.25 CU, 100 CU-hours correspond to about 400 active compute hours/month, shared with all queries in this project. These are capacity calculations, not a guarantee of uninterrupted free operation.
 
-1. Agree on public GitHub repo name/visibility and which screenshots to include. Review the committed source and ignored `.env`, `.data`, `.storage`, browser traces and node_modules.
-2. Create a Neon **Free** PostgreSQL project without card/billing upgrades, near the chosen function region. Set a pooled runtime `DATABASE_URL`; use the provider's migration connection as appropriate for release-time `prisma migrate deploy`. Do not run development migrations against production.
-3. Create a Vercel **Hobby** project. Framework: Next.js; Node 24; build: `npm run build`; no static output override. Add `DATABASE_URL`, a fresh random `BETTER_AUTH_SECRET` (32+ bytes) and `BETTER_AUTH_URL=https://<approved-domain>` to private environment settings. Do not reuse local secrets.
-4. Run `prisma migrate deploy` once as a controlled release step. Run the idempotent showcase seed only if wanted; visitor demos create their own isolated data. Never run embedded PostgreSQL in the deployment.
-5. Keep attachments visibly unavailable on Vercel until a durable private storage adapter is authorized and implemented. The existing handler detects Vercel and returns a clear 503 rather than pretending ephemeral files persist. A specific free private storage provider has not been connected or validated.
-6. Enable the workflow after the owner pushes to GitHub. GitHub Actions is prepared locally but has **not** run remotely. Local tests ran on macOS/Node 26; CI uses Linux/Node 24 and PostgreSQL 18.
-7. Deploy HTTPS, verify cookie flags, tenant isolation, invitation origin, two sessions, mobile flows, conflict behavior and quota/retention settings on the actual deployment. Capture new hosted evidence. Review trusted proxy/IP behavior for auth throttling.
-8. Only then add the approved URL to the portfolio and LinkedIn material. No live URL is invented in this repository.
+The app uses short authenticated HTTP requests, PostgreSQL transactions and version checks. No persistent WebSocket server or third-party realtime provider is needed. Presence and instant collaborative text merging are not implemented. Wider promotion should add incremental snapshots, pagination, idle backoff and a scheduled retention policy.
 
-## Local alternative
+Private attachments use PostgreSQL bytea storage on Vercel, behind authenticated download routes. Quotas are **1 MiB/file, 5 MiB/workspace and 100 MiB of binary content globally**, enforced by transactionally serialized reservations. This uses the already authorized Free database rather than another storage service. It is appropriate for a small demo, not large-file storage. Database overhead, task data and egress also consume free quotas. Workspace deletion cascades its blobs; maintenance can reclaim old orphans. Raw file bytes and storage keys are excluded from snapshots.
 
-`npm run local` starts only the isolated database and local development app, applies checked-in migrations, preserves existing data and runs the idempotent showcase seed. Ctrl+C stops its own children. If another FlowTeam database already occupies port 55437, stop that process first or run `npm run dev` against it. Do not kill unrelated applications to reclaim a port.
+## Secure release process
 
-## Operational prerequisites still outstanding
+1. Run lint, TypeScript, unit tests, integration tests, audit and the full browser suite. All mobile cases run; no prior mobile omissions remain.
+2. Audit tracked files and actual local secret values with `npm run audit:publication`; use GitHub noreply author/committer email. `.env`, runtime databases, `.storage`, provider metadata and browser traces stay ignored.
+3. Push only this independent repo's `main`; standard GitHub-hosted public-repo CI uses the checked-in ephemeral PostgreSQL service and dummy CI-only secrets.
+4. Apply `prisma migrate deploy` and idempotent fictional showcase seed only to the new FlowTeam database. Visitor demos create their own private fictional workspace at runtime; no shared demo password exists.
+5. Set encrypted production `DATABASE_URL`, fresh `BETTER_AUTH_SECRET`, exact HTTPS `BETTER_AUTH_URL` and `STORAGE_BACKEND=database`. Connection strings/tokens stay outside Git, shell arguments and documentation.
+6. Deploy only project `flowteam` using its explicit project/team identifiers. `.vercelignore` excludes local data, secrets and test artifacts. Region is Frankfurt; no paid Turbo build flag is used.
+7. Test the public HTTPS origin with `E2E_BASE_URL` and save authentic captures under `docs/screenshots/production`. Check session cookie flags, anonymous demo entry, workspace isolation, roles, persistence, touch drag, uploads and two independent sessions.
+8. Inspect CI and deployment terminal results; record actual outcomes and remaining limitations in TESTING.md. Update README and portfolio copy only with real public URLs.
 
-Durable private cloud attachments, verified email/password recovery, real deployment validation, production request budgets and a scheduled maintenance policy are not complete. Presence is optional and is not represented as implemented. The app can be reviewed and used entirely locally without any of these services.
+## Local operation
+
+`npm run local` still starts the isolated loopback PostgreSQL and Next development server. Existing local data is preserved. `STORAGE_BACKEND=database` also exercises the hosted attachment adapter locally. A production-build test server can use port 3001 and `BETTER_AUTH_URL=http://127.0.0.1:3001` while leaving an existing development server on 3000 untouched.
+
+`npm run maintenance` is dry-run. Review eligibility before applying it to the FlowTeam database with `--apply`. Do not point maintenance, migrations or seeds at other projects. Email recovery/delivery, physical-device/Safari verification, presence, large object storage and broad load testing remain outside this release.

@@ -1,11 +1,16 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Browser } from '@playwright/test';
+const BASE = process.env.E2E_BASE_URL || 'http://127.0.0.1:3000';
+const SCREENSHOTS = process.env.E2E_SCREENSHOT_DIR || 'docs/screenshots';
+async function contextFor(browser: Browser, page: Page) {
+  return browser.newContext({
+    baseURL: BASE,
+    viewport: page.viewportSize()!,
+    hasTouch: page.viewportSize()!.width <= 700,
+    isMobile: page.viewportSize()!.width <= 700,
+  });
+}
 // Respect Better Auth's default 3 sign-ups / 10 seconds per origin/IP bucket.
-test.beforeEach(async ({}, info) => {
-  test.skip(
-    info.project.name === 'mobile' &&
-      /real pointer|two independent|invited member/.test(info.title),
-    'Desktop-specific coverage; primary flows also run on mobile.',
-  );
+test.beforeEach(async () => {
   await new Promise((resolve) => setTimeout(resolve, 11000));
 });
 async function demo(page: Page) {
@@ -30,18 +35,18 @@ test('private demo, projects, tasks, edit, comments, filters, views and logout',
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
   await page.screenshot({
-    path: `docs/screenshots/${info.project.name}-welcome.png`,
+    path: `${SCREENSHOTS}/${info.project.name}-welcome.png`,
     fullPage: true,
   });
   await demo(page);
   await page.screenshot({
-    path: `docs/screenshots/${info.project.name}-overview.png`,
+    path: `${SCREENSHOTS}/${info.project.name}-overview.png`,
     fullPage: true,
   });
   await nav(page, 'Website redesign');
   await expect(page.getByRole('heading', { name: 'Website redesign', exact: true })).toBeVisible();
   await page.screenshot({
-    path: `docs/screenshots/${info.project.name}-board.png`,
+    path: `${SCREENSHOTS}/${info.project.name}-board.png`,
     fullPage: true,
   });
   await page.getByRole('button', { name: 'New task', exact: true }).click();
@@ -70,7 +75,7 @@ test('private demo, projects, tasks, edit, comments, filters, views and logout',
   await page.getByRole('button', { name: 'Add checklist item' }).click();
   await page.getByLabel('Capture real screenshots', { exact: true }).check();
   await expect(page.getByLabel('Capture real screenshots', { exact: true })).toBeChecked();
-  await page.screenshot({ path: `docs/screenshots/${info.project.name}-task.png`, fullPage: true });
+  await page.screenshot({ path: `${SCREENSHOTS}/${info.project.name}-task.png`, fullPage: true });
   await page.getByRole('button', { name: 'Close dialog' }).focus();
   await page.keyboard.press('Shift+Tab');
   await expect(page.getByRole('dialog').locator(':focus')).toHaveCount(1);
@@ -112,7 +117,7 @@ test('private demo, projects, tasks, edit, comments, filters, views and logout',
   await page.getByRole('button', { name: 'Toggle color theme' }).click();
   await nav(page, 'Overview');
   await page.screenshot({
-    path: `docs/screenshots/${info.project.name}-light.png`,
+    path: `${SCREENSHOTS}/${info.project.name}-light.png`,
     fullPage: true,
   });
   const width = await page.evaluate(() => ({
@@ -161,10 +166,6 @@ test('register, onboarding, logout and login', async ({ page }) => {
   ).toBeVisible();
 });
 test('real pointer drag persists after reload', async ({ page }, info) => {
-  test.skip(
-    info.project.name === 'mobile',
-    'Pointer drag checked on desktop; mobile uses accessible status selection.',
-  );
   await demo(page);
   await nav(page, 'Website redesign');
   const card = page
@@ -176,16 +177,35 @@ test('real pointer drag persists after reload', async ({ page }, info) => {
   const b = await target.boundingBox();
   expect(a).toBeTruthy();
   expect(b).toBeTruthy();
-  await page.mouse.move(a!.x + a!.width / 2, a!.y + a!.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(a!.x + a!.width / 2 + 10, a!.y + a!.height / 2, { steps: 4 });
-  await page.mouse.move(b!.x + b!.width - 30, b!.y + 100, { steps: 25 });
   const moved = page.waitForResponse(
     (r) => r.url().endsWith('/api/data') && r.request().method() === 'POST',
-    { timeout: 8000 },
+    { timeout: 15000 },
   );
-  await page.mouse.up();
-  await moved;
+  if (info.project.name === 'mobile') {
+    const cdp = await page.context().newCDPSession(page);
+    const start = { x: a!.x + a!.width / 2, y: a!.y + a!.height / 2 };
+    const end = {
+      x: Math.min(b!.x + b!.width - 30, page.viewportSize()!.width - 35),
+      y: b!.y + 100,
+    };
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [start] });
+    for (let i = 1; i <= 16; i++)
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [
+          { x: start.x + ((end.x - start.x) * i) / 16, y: start.y + ((end.y - start.y) * i) / 16 },
+        ],
+      });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp.detach();
+  } else {
+    await page.mouse.move(a!.x + a!.width / 2, a!.y + a!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(a!.x + a!.width / 2 + 10, a!.y + a!.height / 2, { steps: 4 });
+    await page.mouse.move(b!.x + b!.width - 30, b!.y + 100, { steps: 25 });
+    await page.mouse.up();
+  }
+  expect((await moved).status()).toBe(200);
   await expect(
     target.getByRole('button', { name: 'Map the onboarding journey', exact: true }),
   ).toBeVisible();
@@ -201,15 +221,14 @@ test('two independent browser sessions see task and comment updates; demo visito
   browser,
   page,
 }, info) => {
-  test.skip(
-    info.project.name === 'mobile',
-    'Two-session collaboration verified in desktop contexts.',
-  );
   await demo(page);
   const storage = await page.context().storageState();
   const teammate = await browser.newContext({
+    baseURL: BASE,
     storageState: storage,
-    viewport: { width: 1440, height: 1000 },
+    viewport: page.viewportSize()!,
+    isMobile: info.project.name === 'mobile',
+    hasTouch: info.project.name === 'mobile',
   });
   const second = await teammate.newPage();
   await second.goto('/');
@@ -235,10 +254,10 @@ test('two independent browser sessions see task and comment updates; demo visito
     second.getByText('Hello from the first browser session', { exact: true }),
   ).toBeVisible({ timeout: 15000 });
   await second.screenshot({
-    path: 'docs/screenshots/collaboration-session-two.png',
+    path: `${SCREENSHOTS}/${info.project.name}-collaboration-session-two.png`,
     fullPage: true,
   });
-  const visitor = await browser.newContext();
+  const visitor = await contextFor(browser, page);
   const third = await visitor.newPage();
   await demo(third);
   await nav(third, 'Website redesign');
@@ -252,23 +271,16 @@ test('two independent browser sessions see task and comment updates; demo visito
 test('invited member permissions, owner role changes and private attachments', async ({
   browser,
   page,
-}, info) => {
-  test.skip(
-    info.project.name === 'mobile',
-    'Distinct-user role and file permissions are checked in desktop contexts.',
-  );
+}) => {
   await demo(page);
   await nav(page, 'Settings & members');
   await page.getByRole('button', { name: 'Create invite link', exact: true }).click();
   const link = await page.getByRole('textbox', { name: 'Invitation link' }).inputValue();
-  const context = await browser.newContext({
-    baseURL: 'http://127.0.0.1:3000',
-    viewport: { width: 1440, height: 1000 },
-  });
+  const context = await contextFor(browser, page);
   const member = await context.newPage();
   const email = `member.${crypto.randomUUID()}@test.invalid`;
   const signup = await context.request.post('/api/auth/sign-up/email', {
-    headers: { Origin: 'http://127.0.0.1:3000' },
+    headers: { Origin: BASE },
     data: { name: 'E2E Member', email, password: crypto.randomUUID() + crypto.randomUUID() },
   });
   expect(signup.status()).toBe(200);
@@ -281,7 +293,7 @@ test('invited member permissions, owner role changes and private attachments', a
   await expect(member.getByRole('button', { name: 'New project', exact: true })).toHaveCount(0);
   const data = await (await context.request.get('/api/data')).json();
   const denied = await context.request.post('/api/data', {
-    headers: { Origin: 'http://127.0.0.1:3000' },
+    headers: { Origin: BASE },
     data: { action: 'createProject', workspaceId: data.workspace.id, name: 'Forbidden' },
   });
   expect(denied.status()).toBe(403);
@@ -306,7 +318,7 @@ test('invited member permissions, owner role changes and private attachments', a
   expect(await download.text()).toContain('Private notes');
   expect(download.headers()['content-disposition']).toContain('attachment;');
   const outsider = await browser.newContext();
-  expect((await outsider.request.get('http://127.0.0.1:3000' + href)).status()).toBe(401);
+  expect((await outsider.request.get(BASE + href)).status()).toBe(401);
   await outsider.close();
   await context.close();
 });

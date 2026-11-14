@@ -57,6 +57,6 @@ A 409 response requires refetching and a new user decision. Mutation retries are
 
 ## Files
 
-`POST /api/files/upload` accepts multipart `file`, `workspaceId`, `taskId`. Only authenticated members of the task workspace may upload. Limit: 5 MB/file, 50 MB/workspace, 20 uploads/hour/user. Extension and content signatures are validated for PDF, TXT, PNG, JPEG and WebP. Files are stored using opaque UUID names outside `public/`.
+`POST /api/files/upload` accepts multipart `file`, `workspaceId`, `taskId`. Only authenticated members of the task workspace may upload. Limit: 1 MiB/file, 5 MiB/workspace, 20 uploads/hour/user. Extension and content signatures are validated for PDF, TXT, PNG, JPEG and WebP. Files are stored using opaque UUID names outside `public/`.
 
-`GET /api/files/<attachmentId>` rechecks session and workspace membership on every download, returns octet-stream with attachment disposition, nosniff and private/no-store. Inaccessible attachments return 404; anonymous requests return 401. Serverless local writes return 503 until a private durable adapter is implemented. A reverse proxy should enforce the upload body limit as well when self-hosting publicly.
+`GET /api/files/<attachmentId>` rechecks session and workspace membership on every download, returns octet-stream with attachment disposition, nosniff and private/no-store. Inaccessible attachments return 404; anonymous requests return 401. On Vercel bytes are stored in private PostgreSQL blobs with atomic workspace/global quota checks and a global 100 MiB binary-data ceiling. No public object URLs or ephemeral-disk persistence are used. A reverse proxy should enforce the upload body limit as well when self-hosting publicly.

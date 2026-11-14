@@ -23,11 +23,15 @@ try {
   });
   const expired = await db.rateLimit.count({ where: { resetAt: { lt: cutoff } } });
   const keys = new Set((await db.attachment.findMany({ select: { key: true } })).map((a) => a.key));
+  const orphanBlobs = await db.storageBlob.findMany({
+    where: { createdAt: { lt: cutoff }, key: { notIn: [...keys] } },
+    select: { key: true },
+  });
   const orphans = (await readdir('.storage').catch(() => [])).filter(
     (key) => /^[a-f0-9-]{36}$/.test(key) && !keys.has(key),
   );
   console.log(
-    `${apply ? 'APPLY' : 'DRY RUN'}: ${workspaces.length} inactive demo workspaces, ${orphans.length} orphan files, ${expired} old rate counters.`,
+    `${apply ? 'APPLY' : 'DRY RUN'}: ${workspaces.length} inactive demo workspaces, ${orphans.length} orphan files, ${orphanBlobs.length} expired orphan blobs, ${expired} old rate counters.`,
   );
   if (apply) {
     for (const w of workspaces) {
@@ -37,6 +41,7 @@ try {
           where: { id: m.userId, email: { endsWith: '@demo.invalid' }, memberships: { none: {} } },
         });
     }
+    await db.storageBlob.deleteMany({ where: { key: { in: orphanBlobs.map((b) => b.key) } } });
     for (const key of orphans) await unlink(resolve('.storage', key));
     await db.rateLimit.deleteMany({ where: { resetAt: { lt: cutoff } } });
     await db.session.deleteMany({ where: { expiresAt: { lt: cutoff } } });
