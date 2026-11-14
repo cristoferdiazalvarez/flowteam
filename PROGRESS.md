@@ -22,3 +22,8 @@
 - Implemented bounded private PostgreSQL attachment storage for serverless without an additional provider; applied new local migration. Real integration suite now 12/12 including bytes, tenant access, invalid/oversized files and concurrent quota reservations.
 - Removed all mobile skips. Full browser suite: 11/11 passed, including real touch-event drag, collaboration in independent mobile contexts and member/admin/private-file tests. Completed in 2.7 minutes against production build on isolated port 3001; preserved the user's dev server on 3000.
 - Sanitized the original local Git commit's author/committer email to GitHub noreply before publication.
+
+- Published public GitHub repo and first main push; GitHub Actions run 43588765288 succeeded (Linux/Node 24/PostgreSQL 18, all pipeline stages).
+- Created only FlowTeam’s independent Neon Free database and Vercel Hobby project, verified plans before provisioning. Encrypted production variables configured with fresh auth secret and strict TLS; migrations/fictional seed applied. No plans, cards, trials, paid builds or billing settings changed.
+- Deployed production HTTPS at https://flowteam-ten.vercel.app. No Vercel authentication/bypass needed. Production suite: 11/11 passed, no skips, in 3.5 minutes. Stronger collaboration proof uses distinct users/session cookies with Secure/HttpOnly checks; outsider reads and downloads denied.
+- Queried production runtime error/fatal logs: 0 records returned. Replaced README evidence with authentic public screenshots and prepared live-link portfolio/LinkedIn copy.

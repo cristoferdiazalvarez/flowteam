@@ -3,7 +3,7 @@
 Publication was explicitly authorized on 2026-11-14 for **cristoferdiazalvarez/flowteam**, Vercel Hobby and a new independent Neon Free database. No paid plan, trial, card, paid build machine or separate storage/realtime service is used.
 
 - Repository: https://github.com/cristoferdiazalvarez/flowteam
-- Assigned production origin: https://flowteam-ten.vercel.app (release verification in progress; results are recorded in TESTING.md)
+- Assigned production origin: https://flowteam-ten.vercel.app (public HTTPS verified; all 11 production browser scenarios passed)
 - Vercel project: `flowteam`, verified Hobby team; Node 26.x, Frankfurt function region.
 - Neon project: `flowteam`, verified Free organization, PostgreSQL 18 in AWS Frankfurt. Separate from `businessos-demo` and `atelier-commerce`; neither was modified.
 - Runtime uses a pooled connection. Checked-in migrations use a direct connection supplied only through a child process environment. Local secrets/database files were not uploaded.
@@ -13,7 +13,7 @@ Publication was explicitly authorized on 2026-11-14 for **cristoferdiazalvarez/f
 Official sources checked on 2026-11-14:
 
 - [Vercel Hobby](https://vercel.com/docs/plans/hobby): 1 million function invocations/month, 4 active CPU-hours, 360 GB-hours provisioned memory and 100 GB fast transfer. Exceeding free allowances can pause functionality. Project creation does not upgrade the team.
-- [Neon pricing](https://neon.com/pricing): Free lists 100 CU-hours/month/project, 1 GB PostgreSQL storage/project and 5 GB network transfer/month. It suspends compute or disallows growth when limits are reached; no card is required. The provider enforces the Free suspension interval, which was left unchanged. Compute is bounded at 0.25 CU for this demo.
+- [Neon pricing](https://neon.com/pricing): Free lists 100 CU-hours/month/project, 1 GB PostgreSQL storage/project and 5 GB network transfer/month. It suspends compute or disallows growth when limits are reached; no card is required. The provider enforces the Free suspension interval, which was left unchanged. Its API reports `suspend_timeout_seconds: 0`, meaning the default 300 seconds—not disabled suspension—as defined in the [official API schema](https://github.com/neondatabase/neon-api-python/blob/main/v2.json). Compute is bounded at 0.25 CU for this demo.
 - [Vercel request limits](https://vercel.com/docs/functions/limitations): binary uploads are capped by this app at 1 MiB, comfortably below function body limits.
 
 The account/organization plans were verified through authenticated provider APIs immediately before creating resources. No billing APIs, payment-card actions, upgrades, add-ons, paid build options or plan changes were invoked. Free quotas are finite: temporary unavailability on exhaustion is acceptable; automatic paid upgrading is not.
@@ -42,3 +42,13 @@ Private attachments use PostgreSQL bytea storage on Vercel, behind authenticated
 `npm run local` still starts the isolated loopback PostgreSQL and Next development server. Existing local data is preserved. `STORAGE_BACKEND=database` also exercises the hosted attachment adapter locally. A production-build test server can use port 3001 and `BETTER_AUTH_URL=http://127.0.0.1:3001` while leaving an existing development server on 3000 untouched.
 
 `npm run maintenance` is dry-run. Review eligibility before applying it to the FlowTeam database with `--apply`. Do not point maintenance, migrations or seeds at other projects. Email recovery/delivery, physical-device/Safari verification, presence, large object storage and broad load testing remain outside this release.
+
+## Confirmed release evidence
+
+- Public HTTPS origin returns 200 without a Vercel login/bypass token.
+- Production browser suite: **11/11 passed**, 0 skipped, 3.5 minutes. Includes distinct user identities and different HttpOnly/Secure session cookies, mobile touch input, cross-workspace 404 checks and authenticated/anonymous private-file denial.
+- Vercel runtime error/fatal log query returned zero records during the production verification window; public application tests recorded no uncaught page errors in the main flows.
+- GitHub Actions completed successfully on the public repository: [verified run](https://github.com/cristoferdiazalvarez/flowteam/actions/runs/43588765288). [Latest workflow results](https://github.com/cristoferdiazalvarez/flowteam/actions/workflows/ci.yml).
+- Final screenshots are authentic captures from the public origin under `docs/screenshots/production`.
+
+The deployment was made with the authenticated CLI to the explicit FlowTeam project. GitHub Actions runs on pushes independently of Vercel's GitHub App connection. If Vercel has not been granted access to this newly created repo, automatic Git-triggered deployments require connecting **only flowteam** in its Git settings; manual project-scoped deployment remains available. No account-wide Vercel token was added to GitHub Secrets, and no access was broadened to other repositories.

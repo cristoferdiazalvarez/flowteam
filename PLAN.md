@@ -7,5 +7,6 @@
 - [x] Execute unit, PostgreSQL integration and desktop/tablet/mobile browser tests; correct observed failures and capture real screenshots.
 - [x] Document architecture, API, data model, security, test scope, interview case study and publication prerequisites.
 - [x] Verify the one-command local launcher, data preservation and controlled shutdown.
-- [ ] Owner-authorized GitHub publication and HTTPS deployment. Not attempted.
-- [ ] Optional durable private cloud file adapter, email recovery/delivery and presence. Explicitly documented as future work.
+- [x] Owner-authorized public GitHub repo, push, successful remote CI and independent Vercel Hobby/Neon Free HTTPS deployment.
+- [x] Bounded durable private PostgreSQL file adapter, verified locally and on public HTTPS.
+- [ ] Optional email recovery/delivery, presence, large object storage and physical-device/Safari coverage.

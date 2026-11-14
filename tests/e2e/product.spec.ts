@@ -222,14 +222,49 @@ test('two independent browser sessions see task and comment updates; demo visito
   page,
 }, info) => {
   await demo(page);
-  const storage = await page.context().storageState();
+  const snapshot = await (await page.request.get('/api/data')).json();
+  const invitation = await page.request.post('/api/data', {
+    headers: { Origin: BASE },
+    data: { action: 'invite', workspaceId: snapshot.workspace.id, role: 'MEMBER' },
+  });
+  expect(invitation.status()).toBe(200);
+  const invitationToken = (await invitation.json()).url.split('/').pop();
   const teammate = await browser.newContext({
     baseURL: BASE,
-    storageState: storage,
     viewport: page.viewportSize()!,
     isMobile: info.project.name === 'mobile',
     hasTouch: info.project.name === 'mobile',
   });
+  const signup = await teammate.request.post('/api/auth/sign-up/email', {
+    headers: { Origin: BASE },
+    data: {
+      name: 'Collaboration Teammate',
+      email: `collaboration.${crypto.randomUUID()}@test.invalid`,
+      password: crypto.randomUUID() + crypto.randomUUID(),
+    },
+  });
+  expect(signup.status()).toBe(200);
+  expect(
+    (
+      await teammate.request.post('/api/data', {
+        headers: { Origin: BASE },
+        data: { action: 'acceptInvite', token: invitationToken },
+      })
+    ).status(),
+  ).toBe(200);
+  const firstCookie = (await page.context().cookies(BASE)).find((c) =>
+    c.name.includes('session_token'),
+  )!;
+  const secondCookie = (await teammate.cookies(BASE)).find((c) =>
+    c.name.includes('session_token'),
+  )!;
+  expect(firstCookie.value).not.toBe(secondCookie.value);
+  expect(firstCookie.httpOnly).toBe(true);
+  expect(secondCookie.httpOnly).toBe(true);
+  if (BASE.startsWith('https://')) {
+    expect(firstCookie.secure).toBe(true);
+    expect(secondCookie.secure).toBe(true);
+  }
   const second = await teammate.newPage();
   await second.goto('/');
   await nav(page, 'Website redesign');
@@ -265,6 +300,9 @@ test('two independent browser sessions see task and comment updates; demo visito
     .getByRole('textbox', { name: 'Search tasks' })
     .fill('Cross-session collaboration proof');
   await expect(third.locator('.task-card')).toHaveCount(0);
+  expect((await third.request.get('/api/data?workspace=' + snapshot.workspace.id)).status()).toBe(
+    404,
+  );
   await visitor.close();
   await teammate.close();
 });
@@ -319,6 +357,16 @@ test('invited member permissions, owner role changes and private attachments', a
   expect(download.headers()['content-disposition']).toContain('attachment;');
   const outsider = await browser.newContext();
   expect((await outsider.request.get(BASE + href)).status()).toBe(401);
+  const outsiderSignup = await outsider.request.post(BASE + '/api/auth/sign-up/email', {
+    headers: { Origin: BASE },
+    data: {
+      name: 'Outside workspace',
+      email: `outsider.${crypto.randomUUID()}@test.invalid`,
+      password: crypto.randomUUID() + crypto.randomUUID(),
+    },
+  });
+  expect(outsiderSignup.status()).toBe(200);
+  expect((await outsider.request.get(BASE + href)).status()).toBe(404);
   await outsider.close();
   await context.close();
 });

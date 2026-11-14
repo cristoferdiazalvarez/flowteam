@@ -1,6 +1,6 @@
 # Portfolio and LinkedIn material
 
-Use the final verification record when choosing numeric test claims. Add a live link only after an approved deployment is verified.
+Use the final verification record when choosing numeric test claims. Verified live demo: https://flowteam-ten.vercel.app · Source: https://github.com/cristoferdiazalvarez/flowteam · CI: https://github.com/cristoferdiazalvarez/flowteam/actions/workflows/ci.yml
 
 ## Portfolio card (English)
 
@@ -10,7 +10,7 @@ A collaborative project workspace built with Next.js, TypeScript, PostgreSQL and
 
 Tags: Next.js · React · TypeScript · PostgreSQL · Prisma · Better Auth · TanStack Query · dnd-kit · Playwright
 
-Suggested lead image: `screenshots/desktop-overview.png`.
+Suggested lead image: `screenshots/production/desktop-overview.png`.
 Suggested supporting images: `desktop-board.png`, `mobile-overview.png`, `desktop-task.png` and `collaboration-session-two.png`.
 
 ## Portfolio card (Spanish)
@@ -29,7 +29,10 @@ He trabajado autenticación con sesiones, autorización por workspace, Kanban co
 
 Uno de los aprendizajes más útiles ha sido pensar en los límites operativos: una sincronización por polling funciona en serverless, pero consume peticiones y puede mantener la base de datos activa. Elegir una arquitectura incluye explicar sus costes y sus límites.
 
-Repositorio y demo: añadir enlaces tras su publicación autorizada.
+Demo: https://flowteam-ten.vercel.app
+Repositorio: https://github.com/cristoferdiazalvarez/flowteam
+
+Verificación: 6 pruebas unitarias, 12 de integración y 11 escenarios E2E sin omisiones; los 11 escenarios también pasan contra la demo HTTPS. GitHub Actions verificado en verde.
 
 #FullStack #Nextjs #TypeScript #PostgreSQL #WebDevelopment
 

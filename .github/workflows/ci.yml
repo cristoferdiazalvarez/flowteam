@@ -32,6 +32,7 @@ jobs:
       - run: npx prisma generate
       - run: npm run db:migrate
       - run: npm run check
+      - run: npm run audit:publication
       - run: npm audit --audit-level=moderate
       - run: npm run build
       - run: npx playwright install --with-deps chromium

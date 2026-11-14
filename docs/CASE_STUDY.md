@@ -45,4 +45,4 @@ The pointer test is intended to exercise actual dnd-kit sensor movement and veri
 
 ## Honest scope
 
-Implemented scope is documented in README and the API contract. Email verification/recovery, presence, true nested subtasks, pagination and larger object storage remain future work. No live deployment or remote CI execution is claimed. This project demonstrates a coherent application and the ability to identify its operating boundaries.
+Implemented scope is documented in README and the API contract. Email verification/recovery, presence, true nested subtasks, pagination and larger object storage remain future work. The public HTTPS deployment and remote CI have been executed; see TESTING.md for links and exact scope. This project demonstrates a coherent application and the ability to identify its operating boundaries.
